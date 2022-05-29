@@ -4,7 +4,6 @@ from torch.optim import AdamW
 from datasets import load_metric
 from rouge import Rouge
 
-rouge = load_metric('rouge')
 rouge_v2 = Rouge()
 
 class AbstractiveLongDocumentSummarizerModel(LightningModule):
@@ -38,24 +37,6 @@ class AbstractiveLongDocumentSummarizerModel(LightningModule):
              decoder_attention_mask=labels_attention_mask)
         self.log("train_loss", loss, prog_bar=True, logger=True)
         return loss
-
-    def compute_metrics(self, pred, rouge_type):
-        labels_ids = pred.label_ids
-        pred_ids = pred.predictions
-
-        pred_str = self.tokenizer.batch_decode(pred_ids, skip_special_tokens=True)
-        labels_ids[labels_ids == -100] = self.tokenizer.pad_token_id
-        label_str = self.tokenizer.batch_decode(labels_ids, skip_special_tokens=True)
-
-        rouge_output = rouge.compute(
-            predictions=pred_str, references=label_str, rouge_types=[rouge_type]
-        )[rouge_type].mid
-
-        return {
-            f"{rouge_type}_precision": round(rouge_output.precision, 4),
-            f"{rouge_type}_recall": round(rouge_output.recall, 4),
-            f"{rouge_type}_f1": round(rouge_output.fmeasure, 4),
-            }
 
 
     def validation_step(self, batch, batch_idx):

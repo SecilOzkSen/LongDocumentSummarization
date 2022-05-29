@@ -76,7 +76,7 @@ def load_data_v2(split='train',
 
     dataset = load_dataset("ccdv/arxiv-summarization", split=split)
     df_dataset = dataset.to_pandas()
-    df_dataset = df_dataset.sample(frac=0.01)
+    df_dataset = df_dataset.sample(frac=0.2)
     df_dataset["article"] = df_dataset["article"].apply(lambda x: cleanup(x))
     docs = df_dataset["article"].values.tolist()
     df_dataset["abstract"] = df_dataset["abstract"].apply(lambda x: cleanup(x))

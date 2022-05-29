@@ -1,9 +1,10 @@
 from data_operations.datataset_wrapper import ArxivSummaryWithTopicDataModule
 from utils.data_utils import load_data_v2
 from transformers import AutoTokenizer
-from model.model import AbstractiveLongDocumentSummarizerModel
+from model.summarizer_model import AbstractiveLongDocumentSummarizerModel
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
+import torch
 
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
@@ -29,13 +30,13 @@ checkpoint_callback = ModelCheckpoint(dirpath="../checkpoints",
                                       monitor="val_loss",
                                       mode="min")
 
-logger = TensorBoardLogger("lightning_logs",
+logger = TensorBoardLogger("../lightning_logs",
                            name="longformer-with-topic-summarizer",
                            )
 trainer = pl.Trainer(logger=logger,
                    checkpoint_callback=checkpoint_callback,
                    max_epochs=N_EPOCHS,
-                   gpus=1,
                    progress_bar_refresh_rate=30,
                    )
+
 trainer.fit(model, data_module)

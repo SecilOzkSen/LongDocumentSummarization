@@ -8,6 +8,7 @@ import torch
 from torch.utils.data import DataLoader
 from sentence_transformers import SentenceTransformer
 from torch.nn import TransformerEncoderLayer
+from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
 
 class ArxivSummaryWithTopicDataModule(LightningDataModule):
     def __init__(self,
@@ -29,20 +30,20 @@ class ArxivSummaryWithTopicDataModule(LightningDataModule):
 
     def setup(self, stage: Optional[str] = None) -> None:
         self.train_dataset = ArxivSummaryWithTopicDataset(
-            data=self.train_df,
+            dataframe=self.train_df,
             tokenizer=self.tokenizer,
             input_token_limit=self.text_max_token_limit,
             summary_token_limit=self.summary_max_token_limit
         )
         self.validation_dataset = ArxivSummaryWithTopicDataset(
-            data=self.validation_df,
+            dataframe=self.validation_df,
             tokenizer=self.tokenizer,
             input_token_limit=self.text_max_token_limit,
             summary_token_limit=self.summary_max_token_limit
         )
 
         self.test_dataset = ArxivSummaryWithTopicDataset(
-            data=self.test_df,
+            dataframe=self.test_df,
             tokenizer=self.tokenizer,
             input_token_limit=self.text_max_token_limit,
             summary_token_limit=self.summary_max_token_limit
@@ -52,43 +53,48 @@ class ArxivSummaryWithTopicDataModule(LightningDataModule):
         return DataLoader(self.train_dataset,
                           batch_size=self.batch_size,
                           shuffle=True,
-                          num_workers=2)
+                          num_workers=0)
 
     def val_dataloader(self):
         return DataLoader(self.validation_dataset,
                           batch_size=self.batch_size,
                           shuffle=False,
-                          num_workers=2)
+                          num_workers=0)
 
     def test_dataloader(self):
         return DataLoader(self.test_dataset,
                           batch_size=self.batch_size,
                           shuffle=False,
-                          num_workers=2)
+                          num_workers=0)
 
 
 
 class ArxivSummaryWithTopicDataset(Dataset):
     def __init__(self,
-                 data: pd.DataFrame,
+                 dataframe: pd.DataFrame,
                  tokenizer: LongformerTokenizer,
                  input_token_limit: int = 8192,
                  summary_token_limit: int = 512):
         self.tokenizer = tokenizer
-        self.data = data
+        self.dataset = dataframe
         self.input_token_limit = input_token_limit
         self.summary_token_limit = summary_token_limit
         self.sentence_transformer_model = SentenceTransformer('allenai/longformer-base-4096')
         self.transformer_encoder_layer = TransformerEncoderLayer(d_model=512, nhead=8)
+        self.spacy_model = SpacySentenceSplitter(language='en_core_web_sm')
 
 
     def __len__(self):
-        return len(self.data)
+        return len(self.dataset)
 
     def prepare_input_embedding(self, doc, topic):
         topic_embedding = self.sentence_transformer_model.encode(topic, convert_to_numpy=True)
         summed_embeddings = []
-        for sentence in doc.split('\n'):
+        _sentences = self.spacy_model.split_sentences(doc)
+        list_sentences = [sentence.replace('\n', '') for sentence in _sentences] #Data filtering again.
+        for sentence in list_sentences:
+            if len(sentence.split()) <= 2: #Data filtering again.
+                continue
             sentence_embedding = self.sentence_transformer_model.encode(sentence, convert_to_numpy=True)
             sum_embedding = sentence_embedding + topic_embedding
             summed_embeddings.append(sum_embedding)
@@ -98,7 +104,7 @@ class ArxivSummaryWithTopicDataset(Dataset):
 
 
     def __getitem__(self, index:int):
-        data_row = self.data.iloc[index]
+        data_row = self.dataset.iloc[index]
 
         text = data_row['article']
         topic = data_row['topic']
