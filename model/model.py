@@ -8,7 +8,9 @@ rouge = load_metric('rouge')
 rouge_v2 = Rouge()
 
 class AbstractiveLongDocumentSummarizerModel(LightningModule):
-
+    """
+    The document summarization model which uses the pretrained Longfromer model.
+    """
     def __init__(self,
                  model_name_or_path = 'allenai/led-large-16384',
                  ):
