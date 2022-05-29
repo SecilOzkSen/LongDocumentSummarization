@@ -85,23 +85,6 @@ class ArxivSummaryWithTopicDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def _produce_embeddings(self, pretokenized_span:str):
-        with torch.no_grad():
-            encoded_span = self.tokenizer.encode(pretokenized_span)
-            input_ids = torch.tensor([encoded_span])
-            last_hidden_states = self._model(input_ids)[0]
-        return last_hidden_states[:, 1:-1, :]
-
-    def _input_document_sentence_length(self, doc):
-        return len(doc.split('\n'))
-
-    def _prepare_topic(self, topic, text_sentence_length):
-        topic_doc = ''
-        for i in range(text_sentence_length):
-            topic_doc = topic_doc + topic + '. '
-        return topic_doc.rstrip()
-
-
     def prepare_input_embedding(self, doc, topic):
         topic_embedding = self.sentence_transformer_model.encode(topic, convert_to_numpy=True)
         summed_embeddings = []
@@ -135,7 +118,7 @@ class ArxivSummaryWithTopicDataset(Dataset):
         )
 
         labels=summary_encoding["input_ids"]
-        labels[labels==0] = -100 # change padding zero tokens with -100.
+        labels[labels == 0] = -100  # change padding zero tokens with -100.
 
         return dict(
             text=text,

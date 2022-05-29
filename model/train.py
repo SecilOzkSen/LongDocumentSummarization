@@ -1,5 +1,5 @@
 from data_operations.datataset_wrapper import ArxivSummaryWithTopicDataModule
-from utils.data_utils import load_data_as_df
+from utils.data_utils import load_data_v2
 from transformers import AutoTokenizer
 from model.model import AbstractiveLongDocumentSummarizerModel
 import pytorch_lightning as pl
@@ -10,9 +10,9 @@ from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 MODEL_NAME_OR_PATH = 'allenai/led-large-16384'
 N_EPOCHS = 5
 
-df_train = load_data_as_df('train')
-df_validation = load_data_as_df('validation')
-df_test = load_data_as_df('test')
+df_train = load_data_v2('train')
+df_validation = load_data_v2('validation')
+df_test = load_data_v2('test')
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME_OR_PATH)
 

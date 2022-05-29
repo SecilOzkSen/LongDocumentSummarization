@@ -2,8 +2,10 @@ from transformers import AutoModel, AutoTokenizer
 from pytorch_lightning import LightningModule
 from torch.optim import AdamW
 from datasets import load_metric
+from rouge import Rouge
 
 rouge = load_metric('rouge')
+rouge_v2 = Rouge()
 
 class AbstractiveLongDocumentSummarizerModel(LightningModule):
 
@@ -49,8 +51,8 @@ class AbstractiveLongDocumentSummarizerModel(LightningModule):
 
         return {
             f"{rouge_type}_precision": round(rouge_output.precision, 4),
-            f"{rouge_type}_precision": round(rouge_output.recall, 4),
-            f"{rouge_type}_precision": round(rouge_output.fmeasure, 4),
+            f"{rouge_type}_recall": round(rouge_output.recall, 4),
+            f"{rouge_type}_f1": round(rouge_output.fmeasure, 4),
             }
 
 
@@ -65,10 +67,16 @@ class AbstractiveLongDocumentSummarizerModel(LightningModule):
                                      decoder_attention_mask=labels_attention_mask)
 
         self.log("val_loss", loss, prog_bar=True, logger=True)
-        #ROUGE 1:
-        rouge1_metrics = self.compute_metrics(outputs, 'rouge1')
-        rouge2_metrics = self.compute_metrics(outputs, 'rouge2')
-        rougeN_metrics = self.compute_metrics(outputs, 'rougen')
+
+        scores = rouge_v2.get_scores(outputs, batch["summary"])
+        rouge1 = scores['rouge-1']
+        rouge2 = scores['rouge-2']
+        rougeN = scores['rouge-l']
+
+        self.log("rouge_1", rouge1['f'], prog_bar=True, logger=True)
+        self.log("rouge_2", rouge2['f'], prog_bar=True, logger=True)
+        self.log("rouge_n", rougeN['f'], prog_bar=True, logger=True)
+
         return loss
 
     def test_step(self, batch, batch_idx):
