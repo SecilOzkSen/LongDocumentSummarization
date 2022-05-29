@@ -7,6 +7,7 @@ from typing import Optional
 import torch
 from torch.utils.data import DataLoader
 from sentence_transformers import SentenceTransformer
+from torch.nn import TransformerEncoderLayer
 
 class ArxivSummaryWithTopicDataModule(LightningDataModule):
     def __init__(self,
@@ -78,17 +79,11 @@ class ArxivSummaryWithTopicDataset(Dataset):
         self.input_token_limit = input_token_limit
         self.summary_token_limit = summary_token_limit
         self.sentence_transformer_model = SentenceTransformer('allenai/longformer-base-4096')
+        self.transformer_encoder_layer = TransformerEncoderLayer(d_model=512, nhead=8)
+
 
     def __len__(self):
         return len(self.data)
-
-  #  def _prepare_input_document(self, doc):
-  #      sentences = doc.split('\n')
-  #      new_doc = '[CLS] '
-  #      for sentence in sentences:
-  #          new_doc = new_doc + sentence + ' [SEP] '
-
-   #     return new_doc.rstrip(), len(sentences)
 
     def _produce_embeddings(self, pretokenized_span:str):
         with torch.no_grad():
@@ -107,12 +102,6 @@ class ArxivSummaryWithTopicDataset(Dataset):
         return topic_doc.rstrip()
 
 
-  #  def _prepare_topic(self, topic, text_sentence_length):
-  #      topic_doc = '[CLS] '
-  #      for i in range(text_sentence_length):
-  #          topic_doc = topic_doc + topic + ' [SEP] '
-  #      return topic_doc.rstrip()
-
     def prepare_input_embedding(self, doc, topic):
         topic_embedding = self.sentence_transformer_model.encode(topic, convert_to_numpy=True)
         summed_embeddings = []
@@ -127,33 +116,14 @@ class ArxivSummaryWithTopicDataset(Dataset):
 
     def __getitem__(self, index:int):
         data_row = self.data.iloc[index]
+
         text = data_row['article']
         topic = data_row['topic']
         summary = data_row['abstract']
 
-    #    text_sentence_length = self._input_document_sentence_length(text)
-    #    prepared_topic = self._prepare_topic(topic, text_sentence_length)
-
-    #    text_encoding = self.tokenizer.encode(text,
-    #                                             padding="max_length",
-    #                                             truncation=True,
-    #                                             max_length=self.input_token_limit,
-    #                                             return_attention_mask = True,
-    #                                             return_tensors="pt")
-    #    text_embedding = self._produce_embeddings(tokenized_text)
-
-    #    topic_encoding = self.tokenizer.encode(prepared_topic,
-    #                                              padding="max_length",
-    #                                              truncation=True,
-    #                                              max_length=self.input_token_limit)
         summed_embedding = self.prepare_input_embedding(text, topic)
-    #    text_input_ids = torch.tensor([text_encoding])
-    #    text_last_hidden_states = self._model(text_input_ids)[0]
-
-
-     #   topic_embedding = self._produce_embeddings(tokenized_topic)
-
-     #   input_embedding = torch.add(text_embedding, topic_embedding)
+        #Transformer layer for learning the new input representation (as in T-BertSum (see t-bertsum embedding fig.))
+        summed_encoding = self.transformer_encoder_layer(summed_embedding)
 
         summary_encoding = self.tokenizer(
             summary,
@@ -164,16 +134,17 @@ class ArxivSummaryWithTopicDataset(Dataset):
             return_tensors="pt"
         )
 
+        labels=summary_encoding["input_ids"]
+        labels[labels==0] = -100 # change padding zero tokens with -100.
+
         return dict(
             text=text,
             topic=topic,
             summary=summary,
-            text_input_ids=text_encoding["input_ids"].flatten(),
-            text_attention_mask=text_encoding["attention_mask"].flatten(),
-            topic_input_ids=topic_encoding["input_ids"].flatten(),
-            topic_attention_mask=topic_encoding["attention_mask"].flatten(),
-            summary_input_ids=summary_encoding["input_ids"].flatten(),
-            summary_attention_mask=summary_encoding["attention_mask"].flatten()
+            text_input_ids=summed_encoding["input_ids"].flatten(),
+            text_attention_mask=summed_encoding["attention_mask"].flatten(),
+            labels=labels.flatten(),
+            labels_attention_mask=summary_encoding["attention_mask"].flatten(),
         )
 
 

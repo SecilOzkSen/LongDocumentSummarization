@@ -5,6 +5,13 @@ import os
 from sklearn.feature_extraction.text import CountVectorizer
 from typing import List
 
+IRRELEVANT_TOPICS_LIST = [
+    "fig",
+    "et al",
+    "ref",
+    "hep"
+]
+
 class BertTopicForSummarization():
 
     def __init__(self,
@@ -32,16 +39,34 @@ class BertTopicForSummarization():
     def get_model(self,
                   model_file_path="/Users/secilsen/PycharmProjects/LongDocumentSummarization/models/bertopic/model2.bt",
                   data_split="train"):
-        #  if os.path.exists(model_file_path):
-        #      self.topic_model = BERTopic.load(model_file_path)
-         # else:
+          if os.path.exists(model_file_path):
+              self.topic_model = BERTopic.load(model_file_path, embedding_model=self._embedding_model)
+          else:
               self.train_model(model_file_path)
+
+    @staticmethod
+    def _topic_validator(topic:str) -> bool:
+        if topic in IRRELEVANT_TOPICS_LIST:
+            return False
+        if len(topic) <= 2:
+            return False
+        else:
+            return True
+
+    def get_topic_as_str(self, predicted_topic_cluster_id):
+        topics = self.topic_model.topics
+        topics_list = topics.get(predicted_topic_cluster_id)
+        for serie in topics_list:
+            topic = serie[0]
+            if self._topic_validator(topic):
+                return topic
+        return ""
 
     def __call__(self, doc: str):
         # get topic for each doc
-        topic_predictions, probabilities = self.topic_model.transform(doc)
+        topic_predictions, probabilities = self.topic_model.transform([doc])
         #TODO: return the top topic.
-        return topic_predictions
+        return self.get_topic_as_str(topic_predictions[0])
 
 
 

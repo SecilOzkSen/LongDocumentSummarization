@@ -10,6 +10,9 @@ def new_version():
 if __name__ == "__main__":
     docs = load_data(split='train')
     bert_topic = BertTopicForSummarization(docs)
+    topic = bert_topic(docs[0])
+    print(topic)
+
   #  docs = load_data(split='train')
   #  bert_topic(docs[0])
 

@@ -11,9 +11,6 @@ def cleanup(txt:str):
     txt = re.sub(r'.*?xcite.*?', '', txt)
     txt = re.sub(r'.*?xmath.*?', '', txt)
     txt = re.sub(r'h[0-9]+', '', txt)
-  #  txt_tokens = word_tokenize(txt)
- #   filtered_sentence = [w for w in txt_tokens if not w.lower() in stop_words]
- #   sentence = ' '.join(filtered_sentence)
     return txt
 
 def load_data_from_file(data_file_path, is_gold_summaries):
@@ -77,6 +74,7 @@ def load_data_as_df(split='train',
 
     dataset = load_dataset("ccdv/arxiv-summarization", split=split)
     df_dataset = dataset.to_pandas()
+    df_dataset = df_dataset.sample(frac=0.1)
     df_dataset["article"] = df_dataset["article"].apply(lambda x: cleanup(x))
     df_dataset["abstract"] = df_dataset["abstract"].apply(lambda x: cleanup(x))
     df_dataset["topic"] = df_dataset["article"].apply(lambda x: BertTopicForSummarization()())
