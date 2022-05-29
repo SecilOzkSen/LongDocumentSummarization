@@ -14,7 +14,7 @@ class PoolingOp(Enum):
 class TopicEmbeddingExtractor():
 
     def __init__(self,
-                 embedding_model_name_or_path: str = "bert-base-uncased",
+                 embedding_model_name_or_path: str = "allenai/longformer-base-4096",
                  pooling_op: str = "average"):
         if pooling_op not in (PoolingOp.max.name, PoolingOp.average.name):
             raise ValueError(f"Unsupported pooling operation ({pooling_op})")
@@ -31,7 +31,7 @@ class TopicEmbeddingExtractor():
         return last_hidden_states[:, 1:-1, :]
 
     def __call__(self, doc:str, is_pooling: bool = False) -> List[float]:
-        topic = self.bert_topic(doc) #TODO: bert topic needs to give topics for given document.
+        topic = self.bert_topic(doc)
         embedding = self.produce_embeddings(topic)
         if is_pooling:
             pool_op_dim = embedding.size()
