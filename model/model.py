@@ -3,7 +3,9 @@ from pytorch_lightning import LightningModule
 from torch.optim import AdamW
 
 class AbstractiveLongDocumentSummarizerModel(LightningModule):
-
+    """
+    The document summarization model which uses the pretrained Longfromer model.
+    """
     def __init__(self,
                  model_name_or_path = 'allenai/led-large-16384',
                  ):
