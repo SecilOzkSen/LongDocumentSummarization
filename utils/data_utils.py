@@ -58,26 +58,36 @@ def load_data(split='train',
 
     return _x
 
-def load_data_from_file_as_df(data_file_path):
-    df = pd.read_csv(data_file_path)
+def load_data_from_file_from_json_to_df(data_file_path):
+    with open(data_file_path, 'r') as fp:
+        json_str = json.load(fp)
+    df = pd.read_json(json_str)
     return df
 
 
-def load_data_as_df(split='train',
+def load_data_v2(split='train',
                     data_file_path = "/Users/secilsen/PycharmProjects/LongDocumentSummarization/data"):
-    data_file_path = f"{data_file_path}/{split}.csv"
+    data_file_path = f"{data_file_path}/{split}.2.json"
     print("Data loading....")
 
     if os.path.exists(data_file_path):
         print("Data loading ends.")
-        return load_data_from_file_as_df(data_file_path)
+        return load_data_from_file_from_json_to_df(data_file_path)
 
     dataset = load_dataset("ccdv/arxiv-summarization", split=split)
     df_dataset = dataset.to_pandas()
-    df_dataset = df_dataset.sample(frac=0.1)
+    df_dataset = df_dataset.sample(frac=0.01)
+    df_dataset = df_dataset.head(5)
     df_dataset["article"] = df_dataset["article"].apply(lambda x: cleanup(x))
+    docs = df_dataset["article"].values.tolist()
     df_dataset["abstract"] = df_dataset["abstract"].apply(lambda x: cleanup(x))
-    df_dataset["topic"] = df_dataset["article"].apply(lambda x: BertTopicForSummarization()())
+    bert_topic = BertTopicForSummarization(docs=docs)
+    df_dataset["topic"] = df_dataset["article"].apply(lambda x: bert_topic(x))
+
+    js = df_dataset.to_json(orient='columns')
+
+    with open(data_file_path, 'w') as fp:
+        json.dump(js, fp)
 
     return df_dataset
 

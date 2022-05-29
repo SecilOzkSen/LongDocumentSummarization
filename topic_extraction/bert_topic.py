@@ -65,7 +65,6 @@ class BertTopicForSummarization():
     def __call__(self, doc: str):
         # get topic for each doc
         topic_predictions, probabilities = self.topic_model.transform([doc])
-        #TODO: return the top topic.
         return self.get_topic_as_str(topic_predictions[0])
 
 
