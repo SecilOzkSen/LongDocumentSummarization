@@ -22,6 +22,7 @@ class BertTopicForSummarization():
                  docs: List[str],
                  min_topic_size: int = 50,
                  embedding_model: str = "all-MiniLM-L6-v2",
+                 model_path: str = "/Users/secilsen/PycharmProjects/LongDocumentSummarization/models/bertopic/model2.bt"
                  ):
         """
 
@@ -32,14 +33,13 @@ class BertTopicForSummarization():
 
         self._min_topic_size = min_topic_size
         self._embedding_model = SentenceTransformer(embedding_model)
+        self._model_file_path = model_path
         self.get_model()
 
-    def train_model(self,
-                    model_file_path: str):
+    def train_model(self):
         """
         Trains BERTopic for the input documents and saves it. Returns the topics and respective probabilities.
 
-        :param model_file_path: str, file where the trained topicmodel will be saved
         """
         vectorizer_model = CountVectorizer(ngram_range=(1, 2), stop_words="english")
         self.topic_model = BERTopic(verbose=True,
@@ -49,10 +49,9 @@ class BertTopicForSummarization():
                                     )
         embeddings = self._embedding_model.encode(self.docs, show_progress_bar=True)
         topics, probabilities = self.topic_model.fit_transform(self.docs, embeddings)
-        self.topic_model.save(model_file_path)
+        self.topic_model.save(self._model_file_path)
 
     def get_model(self,
-                  model_file_path="/Users/secilsen/PycharmProjects/LongDocumentSummarization/models/bertopic/model2.bt",
                   data_split="train"):
           """
           Load a pretrained topic model from file, if the path is invalid train a new one.
@@ -60,10 +59,10 @@ class BertTopicForSummarization():
           :param model_file_path: path to the pretrained model
           """
 
-          if os.path.exists(model_file_path):
-              self.topic_model = BERTopic.load(model_file_path, embedding_model=self._embedding_model)
+          if os.path.exists(self._model_file_path):
+              self.topic_model = BERTopic.load(self._model_file_path, embedding_model=self._embedding_model)
           else:
-              self.train_model(model_file_path)
+              self.train_model(self._model_file_path)
 
     @staticmethod
     def _topic_validator(topic:str) -> bool:

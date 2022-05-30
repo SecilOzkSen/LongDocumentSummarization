@@ -66,21 +66,25 @@ def load_data_from_file_from_json_to_df(data_file_path):
 
 
 def load_data_v2(split='train',
-                    data_file_path = "/Users/secilsen/PycharmProjects/LongDocumentSummarization/data"):
+                 data_file_path = "/Users/secilsen/PycharmProjects/LongDocumentSummarization/data",
+                 bertopic_path: str = "/Users/secilsen/PycharmProjects/LongDocumentSummarization/models/bertopic/model2.bt"):
     data_file_path = f"{data_file_path}/{split}.2.json"
     print("Data loading....")
 
     if os.path.exists(data_file_path):
         print("Data loading ends.")
         return load_data_from_file_from_json_to_df(data_file_path)
-
+    print(split)
     dataset = load_dataset("ccdv/arxiv-summarization", split=split)
+    #dataset = load_dataset("C:\\Users\\Sarah\\Documents\\0Uni\\AdvancedNLP\\LongDocumentSummarization\\data", split=split)
+    print("data loadesd")
     df_dataset = dataset.to_pandas()
-    df_dataset = df_dataset.sample(frac=0.2)
+    df_dataset = df_dataset.sample(frac=0.1)
     df_dataset["article"] = df_dataset["article"].apply(lambda x: cleanup(x))
     docs = df_dataset["article"].values.tolist()
     df_dataset["abstract"] = df_dataset["abstract"].apply(lambda x: cleanup(x))
-    bert_topic = BertTopicForSummarization(docs=docs)
+    bert_topic = BertTopicForSummarization(docs=docs, model_path=bertopic_path)
+    print("Topics done.")
     df_dataset["topic"] = df_dataset["article"].apply(lambda x: bert_topic(x))
 
     js = df_dataset.to_json(orient='columns')

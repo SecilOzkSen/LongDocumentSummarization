@@ -11,6 +11,13 @@ from torch.nn import TransformerEncoderLayer
 from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
 
 class ArxivSummaryWithTopicDataModule(LightningDataModule):
+    """
+    Dataset handler, stores the train, validation and test set. The data is passed as pandas dataframes.
+    It makes use of the ArxivSummaryWithTopicDataset to convert the documents to the input representation.
+    The final input representation is build using Longformer sentence embeddings and embedding BERTopic
+    and passing this representation through a transformer layer. The output contains the corresponding representation
+    of the document and summary and the respective attention masks.
+    """
     def __init__(self,
                  train_df: pd.DataFrame,
                  validation_df: pd.DataFrame,
@@ -70,11 +77,21 @@ class ArxivSummaryWithTopicDataModule(LightningDataModule):
 
 
 class ArxivSummaryWithTopicDataset(Dataset):
+    """
+    One dataset of documents that are converted into the input representation which combines longformer sentence embeddings and topic embeddings.
+    """
     def __init__(self,
                  dataframe: pd.DataFrame,
                  tokenizer: LongformerTokenizer,
                  input_token_limit: int = 8192,
                  summary_token_limit: int = 512):
+        """
+
+        :param dataframe: The dataset as a pandas dataframe with the columns article, abstract and topic
+        :param tokenizer: the Longformer tokenizer
+        :param input_token_limit: maximum supported length of documents
+        :param summary_token_limit: maximum output length
+        """
         self.tokenizer = tokenizer
         self.dataset = dataframe
         self.input_token_limit = input_token_limit
@@ -88,6 +105,13 @@ class ArxivSummaryWithTopicDataset(Dataset):
         return len(self.dataset)
 
     def prepare_input_embedding(self, doc, topic):
+        """
+        Get the input embeddings of a document by adding the longfomer sentence embedding and the topic embedding for each sentence.
+
+        :param doc: the document to be represented
+        :param topic: str, the topic classification by BERTopic
+        :return: the document embedding as a numpy array
+        """
         topic_embedding = self.sentence_transformer_model.encode(topic, convert_to_numpy=True)
         summed_embeddings = []
         _sentences = self.spacy_model.split_sentences(doc)
@@ -104,6 +128,17 @@ class ArxivSummaryWithTopicDataset(Dataset):
 
 
     def __getitem__(self, index:int):
+        """
+        Get the input representation of one document and the representation of the gold summary.
+        :param index: id of the target document
+        :return: dict: text: of the document,
+                topic: predicted by BERTopic,
+                summary: the abstract of the article,
+                text_input_ids: new input representation from the transformer a conversion of the sentence and topic embedding,
+                text_attention_mask: the attention mask from the transformer layer,
+                labels: representation of the gold summary,
+                labels_attention_mask: the corresponding attention mask
+        """
         data_row = self.dataset.iloc[index]
 
         text = data_row['article']
